@@ -1,16 +1,21 @@
+import math
+import codecs
+import re
 import numpy as np
 
 import torch
 import torch.nn as nn
 from torch.nn import init
-from torch.utils.data import Dataset
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
+import sentencepiece as spm
 
 
-def weights_init(m, norm_type="normal"):
+def weights_init(m, norm_type="xavier"):
     classname = m.__class__.__name__
     if classname.find('Norm') != -1:
         if norm_type == "normal":
-            init.normal_(m.weight, 1.0, 0.02)
+            init.constant_(m.weight, 1.0)
             init.constant_(m.bias, 0.0)
         elif norm_type == "xavier":
             init.xavier_uniform_(m.weight)
@@ -23,10 +28,12 @@ def weights_init(m, norm_type="normal"):
 
         if norm_type == "normal":
             init.normal_(m.weight, 0, 0.02)
-            init.constant_(m.bias, 0.0)
+            if m.bias is not None:
+                init.constant_(m.bias, 0.0)
         elif norm_type == "xavier":
             init.xavier_uniform_(m.weight)
-            init.constant_(m.bias, 0.0)
+            if m.bias is not None:
+                init.constant_(m.bias, 0.0)
         elif norm_type == "orthogonal":
             init.orthogonal_(m.weight, np.sqrt(2))
             init.constant_(m.bias, 0.0)
@@ -35,7 +42,8 @@ def weights_init(m, norm_type="normal"):
         if norm_type == "normal":
             init.normal_(m.weight, 0, 0.02)
         elif norm_type == "xavier":
-            init.xavier_uniform_(m.weight)
+            if m.bias is not None:
+                init.xavier_uniform_(m.weight)
         elif norm_type == "orthogonal":
             init.orthogonal_(m.weight, np.sqrt(2))
 
@@ -45,7 +53,7 @@ def to_list(x):
 
 
 class MyDataset(Dataset):
-    def __init__(self, train_ja, train_en, ja_enc, en_enc, ja_dic, en_dic, padding_len=128, padding_id=8000,
+    def __init__(self, train_ja, train_en, ja_enc, en_enc, ja_dic, en_dic, padding_len=64, padding_id=8000,
                  tokenizer="spm"):
         self.train_ja = train_ja
         self.train_en = train_en
@@ -124,7 +132,8 @@ def to_tensor(x):
 def generate_attention_mask(inp, inp_tgt, pad_id_inp, pad_id_tgt):
     ## encoderのAttentionMask
     inp_mask = inp != pad_id_inp
-    inp_masks = torch.bmm(inp_mask.unsqueeze(-1).float(), inp_mask.unsqueeze(1).float())
+    #     inp_masks = torch.bmm(inp_mask.unsqueeze(-1).float(),inp_mask.unsqueeze(1).float())
+    inp_masks = inp_mask.unsqueeze(1).float()
 
     ## masked_MHAのAttentionMask
     b, l = inp_tgt.shape
@@ -133,8 +142,16 @@ def generate_attention_mask(inp, inp_tgt, pad_id_inp, pad_id_tgt):
     tgt_masks = (mask & tgt_mask).float()
 
     ## source_target_attentionMask
-    memory_mask = torch.matmul(inp_mask.float().unsqueeze(-1), tgt_mask.float())
+    memory_mask = torch.matmul(tgt_mask.transpose(2, 1).float(), inp_mask.unsqueeze(1).float())
     memory_masks = memory_mask
+
+    ## attweightにマスクをする時, 0 or -infで足してマスクをする
+    zero_mask = torch.zeros(size=(1,)).to(inp_tgt.device)
+    inf_mask = torch.Tensor([float(-1e36)]).to(inp_tgt.device)
+
+    inp_masks = torch.where(inp_masks == 1., zero_mask, inf_mask)
+    tgt_masks = torch.where(tgt_masks == 1., zero_mask, inf_mask)
+    memory_masks = torch.where(memory_masks == 1., zero_mask, inf_mask)
 
     return inp_masks.unsqueeze(1), tgt_masks.unsqueeze(1), memory_masks.unsqueeze(1)
 
