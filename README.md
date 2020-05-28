@@ -10,4 +10,4 @@ embedding層と出力層は共有
 日本語，英語の両方のtextを用いてsentencepiece_vocab8000,unigramのパラメータで学習
 
 
-
+[drive](https://drive.google.com/open?id=13RhCHjX3tVb2-j2HDnMCgQYldeFb01QA)
