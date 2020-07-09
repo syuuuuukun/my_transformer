@@ -99,8 +99,6 @@ class MultiHeadAttention(nn.Module):
         ## encoder-decoder-attention
         b = query.shape[0]
 
-        #         att_mask2 = torch.where(att_mask == 0,torch.Tensor([1]).to(att_mask.device),
-        #                                    torch.Tensor([0]).to(att_mask.device))
         ## key query value
         query = self.q_enc(query)
         key = self.k_enc(key)
@@ -114,8 +112,6 @@ class MultiHeadAttention(nn.Module):
         att_weight = torch.matmul(q, k.permute(0, 1, 3, 2)) / self.scale
         att_weight = torch.add(att_weight, att_mask)
         att_weight = torch.softmax(att_weight, dim=-1)
-        #         att_weight = torch.mul(enc_att_mask2,att_weight)
-        #         print(att_weight[0,0,:12,:12])
         att_weight = self.att_drop(att_weight)
 
         enc_out = torch.matmul(att_weight, v)
@@ -201,7 +197,7 @@ class translation_model(nn.Module):
         src_masks, _, _ = generate_attention_mask(src, src, src_pad_id, tgt_pad_id)
         ##入力文のエンコード
         src_emb = self.ja_embedding(src) * (self.dim ** 0.5)
-        src_emb = self.ja_pe(src_emb)
+        src_emb = src_emb + self.en_pe.pe[:, :src_emb.shape[1], :]
 
         for encoder in self.encoders:
             src_emb, att_weight = encoder(src_emb, src_masks)

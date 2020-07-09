@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 import sentencepiece as spm
 
 
-def weights_init(m, norm_type="xavier"):
+def weights_init(m, norm_type="normal"):
     classname = m.__class__.__name__
     if classname.find('Norm') != -1:
         if norm_type == "normal":
