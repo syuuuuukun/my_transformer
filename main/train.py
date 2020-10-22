@@ -23,27 +23,32 @@ if __name__ == "__main__":
     pad_id_en = 8000
     seq_len = 96
 
+    ##tokenizerの呼び出し
     sp_en = spm.SentencePieceProcessor()
     sp_ja = spm.SentencePieceProcessor()
 
+    ##tokenizerをload
     sp_en.Load("./data/en_ja_8000.model")
     sp_ja.Load("./data/en_ja_8000.model")
 
+    ##日本語と英語
     ja_path = "./data/train50000jatext.txt"
     en_path = "./data/train50000entext.txt"
 
+    ## 読み込んだ．テキストファイルに改行コードがあるので削除
     with codecs.open(ja_path, "r", "utf-8") as r:
         line = r.readlines()
         line = list(map(lambda x: (re.sub("\n", "", x)), line))
-
-    train_data_ja = np.array(line)
 
     with codecs.open(en_path, "r", "utf-8") as r:
         line = r.readlines()
         line = list(map(lambda x: re.sub("\n", "", x), line))
 
+    ##処理しやすいようにnumpyに変換
+    train_data_ja = np.array(line)
     train_data_en = np.array(line)
 
+    ##テストデータのファイルをロード
     ja_path = "./data/test1000.ja"
     en_path = "./data/test1000.en"
 
@@ -55,28 +60,33 @@ if __name__ == "__main__":
         line = r.readlines()
         test_en = list(map(lambda x: re.sub("\n", "", x), line))
 
+    ##単語分かち書きでも使えるように単語辞書の作成
     ja_dic = make_dict(train_data_ja)
     en_dic = make_dict(train_data_en)
 
+    ##vocabのサイズを取得
     ja_vocab = sp_en.get_piece_size()
     en_vocab = sp_ja.get_piece_size()
 
+    ##訓練とテストに使うDatasetとLoaderを定義
     dataset = MyDataset(train_data_ja, train_data_en, sp_ja, sp_en, ja_dic, en_dic, seq_len, padding_id=pad_id_en)
     dataloader = DataLoader(dataset, batch_size=96, shuffle=True)
-
     testset = MyDataset(test_ja, test_en, sp_ja, sp_en, ja_dic, en_dic, seq_len, padding_id=pad_id_en)
     testloader = DataLoader(testset, batch_size=32, shuffle=False)
 
-    device = "cuda:1"
 
+    device = "cuda:1"
+    ##モデルの呼び出し
     # model = translation_model(transformer,ja_vocab+1,en_vocab+3,dim=dim).to(device)
     model = translation_model(ja_vocab + 1, en_vocab + 1, dim=model_d, head=head_num, layer_num=layer_num,
                               seq_len=seq_len).to(device)
     lossfc = nn.CrossEntropyLoss(ignore_index=pad_id_en)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
+    ##パラメータ数を出力
     count_param(model)
 
+    ##訓練のループ
     losses = []
     for ite in range(1, 100000):
         optimizer.param_groups[0]['lr'] = (512 ** -0.5) * min(ite ** -0.5, ite * (warm_up ** -1.5))
