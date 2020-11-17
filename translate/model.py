@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import *
-
 
 class Encoder(nn.Module):
     def __init__(self, dim=512, head=8, drop_rate=0.1, ffn_dim=2048):
