@@ -12,7 +12,7 @@ import sentencepiece as spm
 from translate.model import translation_model
 
 class Predicter():
-    def __init__(self, dim=512,head_num=8,layer_num=4,pad_id=8000,seq_len=96,pretraiend=True):
+    def __init__(self, dim=512,head_num=8,layer_num=4,pad_id=8000,seq_len=96,weight_path=None,sp_path=None):
         self.dim = dim
         self.head_num = head_num
         self.layer_num = layer_num
@@ -22,10 +22,12 @@ class Predicter():
         self.model = translation_model(pad_id + 1, pad_id + 1, dim=dim, head=head_num, layer_num=layer_num,
                               seq_len=seq_len)
         self.model.eval()
-        self.model.load_state_dict(torch.load("../main/data/model_result_0033001iteration.pt"))
+        if weight_path is not None:
+            self.model.load_state_dict(torch.load(weight_path))
 
         self.sp_en = spm.SentencePieceProcessor()
-        self.sp_en.Load("../main/data/en_ja_8000.model")
+        if sp_path is not None:
+            self.sp_en.Load(sp_path)
 
 
     def predict(self, text):
@@ -36,5 +38,7 @@ class Predicter():
 
 
 if __name__ == "__main__":
+    
+
     model = Predicter()
     print(model.predict("ごめんなさい。早く帰らなくちゃ"))
