@@ -23,7 +23,7 @@ class Predicter():
                               seq_len=seq_len)
         self.model.eval()
         if weight_path is not None:
-            self.model.load_state_dict(torch.load(weight_path)["model"])
+            self.model.load_state_dict(torch.load(weight_path))
 
         self.sp_en = spm.SentencePieceProcessor()
         if sp_path is not None:
