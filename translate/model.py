@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from translate.utils import *
+from utils import *
 
 
 class Encoder(nn.Module):

@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import sentencepiece as spm
 
-from translate.model import translation_model
+from model import translation_model
 
 class Predicter():
     def __init__(self, dim=512,head_num=8,layer_num=4,pad_id=8000,seq_len=96,weight_path=None,sp_path=None):
